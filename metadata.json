@@ -1,0 +1,6 @@
+{
+  "name": "PAUD Pintar Ceria - E-Learning & Sistem Informasi PAUD",
+  "description": "Sistem Informasi E-Learning interaktif dan manajemen rapor Kurikulum Merdeka untuk anak usia dini (PAUD/TK) dengan modul huruf, angka, mewarnai, lagu ceria, dan penilaian perkembangan anak.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
