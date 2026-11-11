@@ -206,7 +206,11 @@ export function AdminLayout({
           {/* Sidebar Header */}
           <div className="h-16 px-5 border-b border-slate-700/60 flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="text-2xl shrink-0">📚</span>
+              <img
+                src="/assets/aistudio/image_9bace47d.png"
+                alt="Logo YPMNU TK Masyithoh Cimanggu"
+                className="w-8 h-10 object-contain shrink-0 filter drop-shadow-sm"
+              />
               <div className="leading-tight">
                 <span className="font-extrabold text-sm text-white tracking-tight block">
                   TK MASYITHOH

@@ -44,6 +44,7 @@ export function AttendanceView({ students, classes, school }: AttendanceViewProp
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [downloadSuccessMessage, setDownloadSuccessMessage] = useState<string | null>(null);
   const [showOfficialPreview, setShowOfficialPreview] = useState(false);
+  const [finishedClassBanner, setFinishedClassBanner] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -53,6 +54,13 @@ export function AttendanceView({ students, classes, school }: AttendanceViewProp
   // Helper to get class student count
   const getClassStudentCount = (clsId: string) => {
     return students.filter((s) => s.kelasId === clsId).length;
+  };
+
+  // Check if a student has been attended/marked on the selected date
+  const isStudentAttended = (studentId: string): boolean => {
+    return attendanceRecords.some(
+      (r) => r.date === selectedDate && r.studentId === studentId && Boolean(r.status)
+    );
   };
 
   // Filter students based on selected class and search
@@ -101,6 +109,11 @@ export function AttendanceView({ students, classes, school }: AttendanceViewProp
     const currentTemp = getStudentTemp(studentId);
     StorageService.setStudentAttendance(selectedDate, studentId, status, currentNote, currentTemp);
     setAttendanceRecords(StorageService.getAttendanceRecords());
+
+    const student = students.find((s) => s.id === studentId);
+    const statusMap: Record<AttendanceStatus, string> = { H: 'Hadir', S: 'Sakit', I: 'Izin', A: 'Alfa' };
+    const label = statusMap[status] || 'Hadir';
+    showToast(`✓ Selesai! Presensi ${student?.namaPanggilan || 'siswa'} tercatat: ${label}`);
   };
 
   const handleNoteChange = (studentId: string, note: string) => {
@@ -135,6 +148,33 @@ export function AttendanceView({ students, classes, school }: AttendanceViewProp
     setAttendanceRecords(StorageService.getAttendanceRecords());
     showToast(`${label} berhasil ditandai HADIR pada tanggal ${selectedDate}!`);
     soundService.speakIndonesian(`${label} berhasil ditandai hadir!`);
+  };
+
+  // Explicit Selesai Absen action
+  const handleFinishAttendance = (clsId?: string) => {
+    soundService.playVictory();
+    confetti({ particleCount: 55, spread: 75 });
+
+    const targetClass = classes.find((c) => c.id === clsId);
+    const className = targetClass ? targetClass.namaKelas : 'Semua Kelas';
+
+    // Auto-record any unrecorded students in scope as Hadir
+    const targetStudents = clsId && clsId !== 'ALL'
+      ? students.filter((s) => s.kelasId === clsId)
+      : filteredStudents;
+
+    const unrecorded = targetStudents.filter(
+      (s) => !attendanceRecords.some((r) => r.date === selectedDate && r.studentId === s.id)
+    );
+
+    if (unrecorded.length > 0) {
+      StorageService.markAllPresent(selectedDate, unrecorded.map((s) => s.id));
+      setAttendanceRecords(StorageService.getAttendanceRecords());
+    }
+
+    setFinishedClassBanner(className);
+    showToast(`✓ Selesai! Presensi ${className} telah selesai dan tersimpan rapi.`);
+    soundService.speakIndonesian(`Presensi ${className} selesai dan berhasil disimpan.`);
   };
 
   // Sync attendance summary to Rapor
@@ -370,7 +410,7 @@ export function AttendanceView({ students, classes, school }: AttendanceViewProp
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.setTextColor(100, 110, 125);
-      doc.text('NIP. - / Pembina PAUD', col1X, sigY + 33, { align: 'center' });
+      doc.text('NIP. - / Pembina TK', col1X, sigY + 33, { align: 'center' });
       doc.text('NIP. - / Guru Pendamping', col2X, sigY + 33, { align: 'center' });
 
       // Clean file name
@@ -532,8 +572,8 @@ export function AttendanceView({ students, classes, school }: AttendanceViewProp
   </table>
   <table class="sig-table">
     <tr>
-      <td style="width:50%;">Mengetahui,<br>Kepala ${school.namaSekolah}<br><br><br><br><b><u>${school.kepalaSekolah}</u></b></td>
-      <td style="width:50%;">${school.kabKota}, 29 Oktober 2026<br>Guru Kelas / Walikelas<br><br><br><br><b><u>${targetClass?.waliKelas || 'Wali Kelas'}</u></b></td>
+      <td style="width:50%;">Mengetahui,<br>Kepala ${school.namaSekolah}<br><br><br><br><b><u>${school.kepalaSekolah}</u></b><br><span style="font-size:10px; color:#64748b;">NIP. - / Pembina TK</span></td>
+      <td style="width:50%;">${school.kabKota}, 29 Oktober 2026<br>Guru Kelas / Walikelas<br><br><br><br><b><u>${targetClass?.waliKelas || 'Wali Kelas'}</u></b><br><span style="font-size:10px; color:#64748b;">NIP. - / Guru Pendamping</span></td>
     </tr>
   </table>
   <script>window.onload = function() { window.print(); }</script>
@@ -642,6 +682,34 @@ export function AttendanceView({ students, classes, school }: AttendanceViewProp
         </div>
       )}
 
+      {/* Selesai Absen Alert Banner */}
+      {finishedClassBanner && (
+        <div className="bg-emerald-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between gap-3 animate-bounce-slow">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-xl">
+              <CheckCircle2 className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <div className="font-extrabold text-sm flex items-center gap-2">
+                <span>✓ Selesai! Presensi Berhasil Disimpan</span>
+                <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">
+                  Tersimpan Otomatis
+                </span>
+              </div>
+              <div className="text-xs text-emerald-100 mt-0.5">
+                Presensi untuk rombel <strong>{finishedClassBanner}</strong> tanggal <strong>{selectedDate}</strong> telah <strong>selesai diabsen</strong> dengan lengkap.
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setFinishedClassBanner(null)}
+            className="px-3.5 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
+          >
+            Tutup
+          </button>
+        </div>
+      )}
+
       {/* ========================================================================= */}
       {/* BAGIAN PEMISAH PER KELAS (PROMINENT CLASS TABS) */}
       {/* ========================================================================= */}
@@ -735,9 +803,15 @@ export function AttendanceView({ students, classes, school }: AttendanceViewProp
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => handleMarkClassPresent(activeClass.id)}
+                className="px-3.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+              >
+                <Check className="w-3.5 h-3.5 text-emerald-600" /> Tandai Semua Hadir di {activeClass.namaKelas.split(' ')[0]}
+              </button>
+              <button
+                onClick={() => handleFinishAttendance(activeClass.id)}
                 className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer transition-transform active:scale-95"
               >
-                <Check className="w-3.5 h-3.5" /> Tandai Semua Hadir di {activeClass.namaKelas.split(' ')[0]}
+                <CheckCircle2 className="w-3.5 h-3.5" /> Selesai Absen
               </button>
               <button
                 onClick={() => handleDownloadPdf(activeClass.id)}
@@ -792,12 +866,20 @@ export function AttendanceView({ students, classes, school }: AttendanceViewProp
           </div>
 
           {activeTab === 'harian' && (
-            <button
-              onClick={() => handleMarkClassPresent(selectedClassId)}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap transition-transform active:scale-95"
-            >
-              <Check className="w-4 h-4" /> Tandai Semua Hadir
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => handleMarkClassPresent(selectedClassId)}
+                className="px-3.5 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-colors"
+              >
+                <Check className="w-4 h-4 text-emerald-600" /> Tandai Semua Hadir
+              </button>
+              <button
+                onClick={() => handleFinishAttendance(selectedClassId)}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap transition-transform active:scale-95"
+              >
+                <CheckCircle2 className="w-4 h-4" /> Selesai Absen
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -883,6 +965,13 @@ export function AttendanceView({ students, classes, school }: AttendanceViewProp
                       <Check className="w-3.5 h-3.5 text-emerald-600" />
                       <span>Tandai Semua Hadir di {cls.namaKelas.split(' ')[0]}</span>
                     </button>
+                    <button
+                      onClick={() => handleFinishAttendance(cls.id)}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 cursor-pointer shadow-sm transition-transform active:scale-95"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Selesai Absen</span>
+                    </button>
                   </div>
                 </div>
 
@@ -893,6 +982,7 @@ export function AttendanceView({ students, classes, school }: AttendanceViewProp
                       <tr>
                         <th className="py-3 px-4">Nama Murid</th>
                         <th className="py-3 px-4 text-center">Status Kehadiran</th>
+                        <th className="py-3 px-4 text-center">Status Absensi</th>
                         <th className="py-3 px-4 text-center">Suhu Badan</th>
                         <th className="py-3 px-4">Catatan Kondisi / Penjemput</th>
                       </tr>
@@ -900,7 +990,7 @@ export function AttendanceView({ students, classes, school }: AttendanceViewProp
                     <tbody className="divide-y divide-slate-100">
                       {classStudents.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="py-6 text-center text-slate-400 font-medium">
+                          <td colSpan={5} className="py-6 text-center text-slate-400 font-medium">
                             Belum ada murid di kelas ini.
                           </td>
                         </tr>
@@ -909,6 +999,7 @@ export function AttendanceView({ students, classes, school }: AttendanceViewProp
                           const currentStatus = getStudentStatus(st.id);
                           const note = getStudentNote(st.id);
                           const temp = getStudentTemp(st.id);
+                          const attended = isStudentAttended(st.id);
 
                           return (
                             <tr key={st.id} className="hover:bg-slate-50/70 transition-colors">
@@ -982,6 +1073,20 @@ export function AttendanceView({ students, classes, school }: AttendanceViewProp
                                 </div>
                               </td>
 
+                              {/* Status Absensi Selesai / Belum */}
+                              <td className="py-3 px-4 text-center whitespace-nowrap">
+                                {attended ? (
+                                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border-2 border-emerald-400 shadow-2xs">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                    <span>Selesai</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-400 border border-slate-200">
+                                    <span>Belum</span>
+                                  </span>
+                                )}
+                              </td>
+
                               {/* Temperature */}
                               <td className="py-3 px-4 text-center">
                                 <input
@@ -1010,6 +1115,29 @@ export function AttendanceView({ students, classes, school }: AttendanceViewProp
                       )}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Bottom Class Card Footer: Status Count & Selesai Absen button */}
+                <div className="p-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 bg-emerald-100 rounded-lg text-emerald-700">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </span>
+                    <span className="text-slate-600 font-semibold">
+                      Status Presensi:{' '}
+                      <strong className="text-emerald-700 font-black">
+                        {classStudents.filter((s) => isStudentAttended(s.id)).length} dari {classStudents.length} murid selesai diabsen
+                      </strong>
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => handleFinishAttendance(cls.id)}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center gap-2 shadow-sm cursor-pointer transition-transform active:scale-95"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Selesai Absen {cls.namaKelas.split(' ')[0]}</span>
+                  </button>
                 </div>
               </div>
             );

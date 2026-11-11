@@ -6,7 +6,7 @@ export const DEFAULT_USERS: AppUser[] = [
     username: 'admin',
     namaLengkap: 'Nurhikmah Umami, S.Pd., M.Psi.',
     role: 'admin',
-    jabatan: 'Kepala Sekolah / Administrator PAUD',
+    jabatan: 'Kepala Sekolah / Administrator TK',
     avatar: '👩🏻‍💼',
     email: 'admin.paud@cimanggu.sch.id',
     password: 'admin', // Kata sandi default admin

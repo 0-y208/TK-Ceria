@@ -77,23 +77,25 @@ export function KidsHeader({
 
   return (
     <>
-      <header className="bg-white/90 backdrop-blur-md sticky top-0 z-40 border-b-4 border-amber-300 shadow-md px-4 py-3 sm:px-6">
+      {/* Playful Rainbow Top Ribbon */}
+      <div className="h-2.5 w-full bg-gradient-to-r from-rose-500 via-amber-400 via-emerald-400 via-sky-400 via-blue-500 to-purple-500 shadow-xs" />
+      <header className="bg-white/95 backdrop-blur-md sticky top-0 z-40 border-b-4 border-amber-400 shadow-md px-4 py-3 sm:px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
           {/* Logo & School Name */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-400 flex items-center justify-center text-3xl shadow-md border-2 border-white animate-bounce-slow">
+            <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-amber-400 via-orange-400 to-rose-400 flex items-center justify-center text-3xl shadow-lg border-2 border-white ring-3 ring-amber-300/70 animate-bounce-slow shrink-0">
               🐰
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-wide font-['Fredoka']">
+                <h1 className="text-xl sm:text-2xl font-black bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-800 bg-clip-text tracking-wide font-['Fredoka']">
                   TK Pintar Ceria
                 </h1>
-                <span className="bg-emerald-500 text-white font-extrabold text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                <span className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
                   Kurikulum Merdeka
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-semibold">
+              <p className="text-xs text-slate-500 font-bold">
                 {school.namaSekolah} • E-Learning & Sistem Penilaian Anak Ceria
               </p>
             </div>
@@ -103,7 +105,7 @@ export function KidsHeader({
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto justify-between md:justify-end">
             {/* Student Switcher */}
             <div className="relative">
-              <div className="flex items-center gap-1.5 bg-amber-50 border-2 border-amber-200 py-1.5 px-3 rounded-2xl">
+              <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 py-1.5 px-3 rounded-2xl shadow-xs">
                 <span className="text-xl">{activeStudent.fotoAvatar}</span>
                 <select
                   value={activeStudent.id}
@@ -129,11 +131,11 @@ export function KidsHeader({
                 soundService.playSparkle();
                 onOpenStickers();
               }}
-              className="flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-white font-black px-3.5 py-1.5 rounded-2xl shadow-md shadow-amber-200 text-xs sm:text-sm transition-transform active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-500 hover:to-yellow-500 text-white font-black px-4 py-2 rounded-2xl shadow-md shadow-amber-300/50 text-xs sm:text-sm transition-transform active:scale-95 cursor-pointer border-2 border-white ring-2 ring-amber-300"
               title="Lihat Bintang & Piagam"
             >
-              <span className="text-lg animate-spin-slow">⭐</span>
-              <span>{starsCount} Bintang</span>
+              <span className="text-xl animate-spin-slow filter drop-shadow">⭐</span>
+              <span className="tracking-wide">{starsCount} Bintang</span>
             </button>
 
             {/* Sound Toggle */}

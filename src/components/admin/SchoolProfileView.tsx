@@ -26,7 +26,7 @@ export function SchoolProfileView({ school, onSave }: SchoolProfileViewProps) {
         <div className="border-b border-slate-200 px-6 py-4 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-2">
             <School className="w-5 h-5 text-blue-600" />
-            <h3 className="text-base font-bold text-slate-800">Ubah Profil Satuan Pendidikan PAUD</h3>
+            <h3 className="text-base font-bold text-slate-800">Ubah Profil Satuan Pendidikan TK</h3>
           </div>
           {saved && (
             <span className="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold flex items-center gap-1">
@@ -39,7 +39,7 @@ export function SchoolProfileView({ school, onSave }: SchoolProfileViewProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                Nama Sekolah / Lembaga PAUD
+                Nama Sekolah / Lembaga TK
               </label>
               <input
                 type="text"
@@ -156,7 +156,7 @@ export function SchoolProfileView({ school, onSave }: SchoolProfileViewProps) {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                Akreditasi BAN PAUD
+                Akreditasi BAN TK
               </label>
               <select
                 value={formData.akreditasi}

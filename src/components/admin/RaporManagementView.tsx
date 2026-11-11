@@ -182,7 +182,102 @@ export function RaporManagementView({
     }
   };
 
-  // Download Rapor as real PDF using html2canvas & jsPDF
+  // Print via isolated iframe to ensure 100% identical styling, borders, and badges without sidebar/scrollbar artifacts
+  const handlePrint = () => {
+    soundService.playSparkle();
+    const sheetElement = document.getElementById('official-rapor-sheet');
+    if (!sheetElement) {
+      window.print();
+      return;
+    }
+
+    const printIframe = document.createElement('iframe');
+    printIframe.style.position = 'fixed';
+    printIframe.style.right = '0';
+    printIframe.style.bottom = '0';
+    printIframe.style.width = '0';
+    printIframe.style.height = '0';
+    printIframe.style.border = '0';
+    printIframe.title = 'Rapor Print Frame';
+    document.body.appendChild(printIframe);
+
+    const pri = printIframe.contentWindow;
+    if (!pri) {
+      window.print();
+      return;
+    }
+
+    let headStyles = '';
+    document.querySelectorAll('style, link[rel="stylesheet"]').forEach((el) => {
+      headStyles += el.outerHTML;
+    });
+
+    pri.document.open();
+    pri.document.write(`<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Rapor TK - ${currentStudent.namaLengkap}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  ${headStyles}
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 10mm;
+    }
+    *, *::before, *::after {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+    html, body {
+      background-color: #ffffff !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      font-family: 'Nunito', system-ui, -apple-system, sans-serif !important;
+    }
+    .print-wrapper {
+      width: 100% !important;
+      max-width: 860px !important;
+      margin: 0 auto !important;
+      padding: 0 !important;
+    }
+    #official-rapor-sheet {
+      box-shadow: none !important;
+      margin: 0 auto !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      border: 1.5px solid #cbd5e1 !important;
+      border-radius: 12px !important;
+      padding: 24px 28px !important;
+      background-color: #ffffff !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="print-wrapper">
+    ${sheetElement.outerHTML}
+  </div>
+</body>
+</html>`);
+    pri.document.close();
+
+    pri.focus();
+    setTimeout(() => {
+      pri.print();
+      setTimeout(() => {
+        if (document.body.contains(printIframe)) {
+          document.body.removeChild(printIframe);
+        }
+      }, 2000);
+    }, 450);
+  };
+
+  // Download Rapor as real high-fidelity PDF using html2canvas & jsPDF with strict aspect ratio preservation
   const handleDownloadPdf = async () => {
     const sheetElement = document.getElementById('official-rapor-sheet');
     if (!sheetElement) return;
@@ -191,23 +286,58 @@ export function RaporManagementView({
       setIsDownloadingPdf(true);
       soundService.playSparkle();
 
+      // High-res desktop capture to prevent responsive mobile squishing
       const canvas = await html2canvas(sheetElement, {
         scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
+        windowWidth: 1024,
       });
 
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      const pageWidth = pdf.internal.pageSize.getWidth(); // 210mm
+      const pageHeight = pdf.internal.pageSize.getHeight(); // 297mm
+      const margin = 10; // 10mm margin
+      const usableWidth = pageWidth - margin * 2; // 190mm
+      const usableHeight = pageHeight - margin * 2; // 277mm
+      
+      // Calculate exact height preserving aspect ratio
+      const aspectRatio = canvas.height / canvas.width;
+      const printHeight = usableWidth * aspectRatio;
 
-      pdf.addImage(imgData, 'PNG', 0, 5, pdfWidth, Math.min(pdfHeight, 287));
+      if (printHeight <= usableHeight) {
+        // Fits perfectly on 1 page with 10mm margins on all sides
+        pdf.addImage(imgData, 'PNG', margin, margin, usableWidth, printHeight, undefined, 'FAST');
+      } else if (printHeight <= 315) {
+        // Slightly overflows: proportionally scale down so it fits gracefully on 1 page without distortion
+        const scale = usableHeight / printHeight;
+        const scaledWidth = usableWidth * scale;
+        const scaledHeight = usableHeight;
+        const xOffset = margin + (usableWidth - scaledWidth) / 2;
+        pdf.addImage(imgData, 'PNG', xOffset, margin, scaledWidth, scaledHeight, undefined, 'FAST');
+      } else {
+        // Multi-page document: paginate cleanly across pages without squashing
+        let heightLeft = printHeight;
+        let position = margin;
+        let page = 1;
+
+        while (heightLeft > 0) {
+          if (page > 1) {
+            pdf.addPage();
+          }
+          pdf.addImage(imgData, 'PNG', margin, position, usableWidth, printHeight, undefined, 'FAST');
+          heightLeft -= usableHeight;
+          position -= usableHeight;
+          page++;
+        }
+      }
 
       const safeName = currentStudent.namaPanggilan.replace(/\s+/g, '_');
       const safeTahun = school.tahunAjaran.replace('/', '-');
-      const fileName = `Rapor_PAUD_${safeName}_${safeTahun}.pdf`;
+      const fileName = `Rapor_TK_${safeName}_${safeTahun}.pdf`;
 
       pdf.save(fileName);
 
@@ -224,36 +354,75 @@ export function RaporManagementView({
     }
   };
 
-  // Fallback / Standalone formatted HTML document download
+  // Fallback / Standalone formatted HTML document download with full Tailwind and responsive print styling
   const handleDownloadHtmlDoc = () => {
     const sheetElement = document.getElementById('official-rapor-sheet');
     if (!sheetElement) return;
 
     const safeName = currentStudent.namaPanggilan.replace(/\s+/g, '_');
     const safeTahun = school.tahunAjaran.replace('/', '-');
-    const fileName = `Rapor_PAUD_${safeName}_${safeTahun}.html`;
+    const fileName = `Rapor_TK_${safeName}_${safeTahun}.html`;
 
     const htmlContent = `<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Rapor PAUD - ${currentStudent.namaLengkap}</title>
+  <title>Rapor TK - ${currentStudent.namaLengkap}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Times New Roman', Times, serif; background: #fff; margin: 20mm; color: #111; }
-    @page { size: A4 portrait; margin: 12mm 15mm; }
-    .print-bar { background: #059669; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 25px; font-family: sans-serif; font-size: 14px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    @page { size: A4 portrait; margin: 10mm; }
+    *, *::before, *::after {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+    body {
+      font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+      background: #f8fafc;
+      padding: 24px 12px;
+      margin: 0;
+      color: #0f172a;
+    }
+    .print-bar {
+      background: #059669;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      margin-bottom: 24px;
+      font-family: sans-serif;
+      font-size: 14px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
     .print-bar:hover { background: #047857; }
-    @media print { .print-bar { display: none; } body { margin: 0; } }
+    @media print {
+      body { background: #ffffff !important; padding: 0 !important; }
+      .print-bar { display: none !important; }
+      #official-rapor-sheet {
+        box-shadow: none !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 12px !important;
+        margin: 0 auto !important;
+      }
+    }
   </style>
 </head>
 <body>
-  <button class="print-bar" onclick="window.print()">🖨️ Cetak Dokumen / Simpan sebagai PDF</button>
-  ${sheetElement.outerHTML}
-  <script>
-    window.addEventListener('load', function() {
-      setTimeout(function() { window.print(); }, 600);
-    });
-  </script>
+  <div style="max-width: 860px; margin: 0 auto; text-align: center;">
+    <button class="print-bar" onclick="window.print()">🖨️ Cetak Dokumen / Simpan sebagai PDF</button>
+  </div>
+  <div style="max-width: 860px; margin: 0 auto;">
+    ${sheetElement.outerHTML}
+  </div>
 </body>
 </html>`;
 
@@ -268,14 +437,6 @@ export function RaporManagementView({
     soundService.playVictory();
     setDownloadSuccess(true);
     setTimeout(() => setDownloadSuccess(false), 5000);
-  };
-
-  // Primary action: downloads PDF and opens browser print dialog
-  const handlePrintOrDownload = async () => {
-    await handleDownloadPdf();
-    setTimeout(() => {
-      window.print();
-    }, 1000);
   };
 
   return (
@@ -560,7 +721,7 @@ export function RaporManagementView({
               <span className="text-xl">📄</span>
               <div>
                 <div className="text-xs font-bold text-slate-800">
-                  Lembar Rapor PAUD: <span className="text-blue-700 font-extrabold">{currentStudent.namaLengkap}</span>
+                  Lembar Rapor TK: <span className="text-blue-700 font-extrabold">{currentStudent.namaLengkap}</span>
                 </div>
                 <div className="text-[11px] text-slate-500">
                   Kurikulum Merdeka • Tahun Ajaran {school.tahunAjaran} ({school.semester})
@@ -569,19 +730,14 @@ export function RaporManagementView({
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
-              {/* Primary Green Button - Exactly matches user screenshot and now triggers direct PDF download & print! */}
+              {/* Primary Green Button - Exactly matches user screenshot and triggers clean print preview dialog */}
               <button
-                onClick={handlePrintOrDownload}
-                disabled={isDownloadingPdf}
-                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold flex items-center gap-2 shadow-md cursor-pointer transition-transform active:scale-95"
-                title="Unduh file PDF dan buka dialog cetak"
+                onClick={handlePrint}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-2 shadow-md cursor-pointer transition-transform active:scale-95"
+                title="Buka dialog cetak rapor resmi atau Simpan ke PDF (Format A4 Kurikulum Merdeka)"
               >
-                {isDownloadingPdf ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                ) : (
-                  <Printer className="w-4 h-4" />
-                )}
-                <span>{isDownloadingPdf ? 'Sedang Memproses PDF...' : 'Cetak Sekarang (PDF / Kertas)'}</span>
+                <Printer className="w-4 h-4" />
+                <span>Cetak Sekarang (PDF / Kertas)</span>
               </button>
 
               {/* Direct PDF Download Button */}
@@ -645,7 +801,7 @@ export function RaporManagementView({
             {/* Title */}
             <div className="text-center font-sans">
               <h3 className="text-base font-bold uppercase tracking-wide">
-                LAPORAN CAPAIAN PEMBELAJARAN PESERTA DIDIK (RAPOR PAUD)
+                LAPORAN CAPAIAN PEMBELAJARAN PESERTA DIDIK (RAPOR TK)
               </h3>
               <p className="text-xs text-slate-600 font-semibold">
                 KURIKULUM MERDEKA • TAHUN AJARAN {school.tahunAjaran}
@@ -751,7 +907,7 @@ export function RaporManagementView({
 
               <div>
                 <p className="text-slate-600">Mengetahui,</p>
-                <p className="font-bold text-slate-800">Kepala Satuan PAUD</p>
+                <p className="font-bold text-slate-800">Kepala Satuan TK</p>
                 <div className="h-16 flex items-end justify-center">
                   <span className="font-bold underline">{school.kepalaSekolah}</span>
                 </div>

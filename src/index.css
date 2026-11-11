@@ -47,29 +47,52 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 12mm 15mm;
+    margin: 10mm;
+  }
+
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
 
   body {
     background: #ffffff !important;
-    color: #000000 !important;
-    font-family: serif, sans-serif !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  aside, header, footer, .print\\:hidden, nav, button {
+  aside,
+  header,
+  footer,
+  nav,
+  button,
+  .print\:hidden,
+  [data-print-hidden="true"] {
     display: none !important;
+  }
+
+  /* Ensure containers do not clip printing */
+  html, body, #root, .min-h-screen, main {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
   }
 
   #official-rapor-sheet {
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
+    margin: 0 auto !important;
+    padding: 24px 28px !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 12px !important;
     box-shadow: none !important;
+    background-color: #ffffff !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
   }
 }
+
 

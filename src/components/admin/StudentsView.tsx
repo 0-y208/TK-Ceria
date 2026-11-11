@@ -144,7 +144,7 @@ export function StudentsView({
       {/* Top Header & Search Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h3 className="text-xl font-bold text-slate-800">Buku Induk Siswa PAUD</h3>
+          <h3 className="text-xl font-bold text-slate-800">Buku Induk Siswa TK</h3>
           <p className="text-xs text-slate-500">
             Data identitas anak didik, orang tua, pertumbuhan antropometri, dan rekaman belajar.
           </p>
@@ -296,7 +296,7 @@ export function StudentsView({
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 my-8">
             <h4 className="text-base font-bold text-slate-800 mb-4 pb-2 border-b">
-              {editingStudent ? `Ubah Data Murid: ${editingStudent.namaLengkap}` : 'Registrasi Peserta Didik Baru (PAUD)'}
+              {editingStudent ? `Ubah Data Murid: ${editingStudent.namaLengkap}` : 'Registrasi Peserta Didik Baru (TK)'}
             </h4>
 
             <form onSubmit={handleSubmit} className="space-y-4 text-xs font-semibold">
